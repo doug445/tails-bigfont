@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+#
+# tails-bigfont — enlarge the microscopic GRUB boot/kernel-select menu text on a
+# Tails USB stick.
+#
+# The dependable fix is NOT a bigger font (GRUB's gfxterm keeps its embedded
+# ~16px "unicode" font as the default regardless of any loadfont), but lowering
+# the GRUB graphics resolution: a smaller canvas makes the native font occupy a
+# much larger share of the screen. We set a gfxmode fallback list so GRUB picks
+# the smallest mode the firmware actually offers (largest text), falling back to
+# 'auto' so it can never blank.
+#
+# Idempotent + reversible. Only touches the unencrypted Tails system partition
+# (vfat, label "Tails"); never the LUKS Persistent Storage partition.
+#
+# Usage:
+#   tails-bigfont [-d /dev/sdX1] [-t SECONDS] [--no-unmount]
+#   tails-bigfont --revert [-d /dev/sdX1]
+#
+set -euo pipefail
+
+GFXMODE_LINE='set gfxmode=640x480,800x600,1024x768,auto'
+TIMEOUT=15
+DEVICE=""
+REVERT=0
+NO_UNMOUNT=0
+
+die()  { printf 'tails-bigfont: %s\n' "$*" >&2; exit 1; }
+info() { printf '  %s\n' "$*"; }
+
+usage() {
+  sed -n '2,30{/^#/!q;s/^# \{0,1\}//p}' "$0"
+  exit "${1:-0}"
+}
+
+# ---- args ----
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -d|--device)  DEVICE="${2:-}"; shift 2 ;;
+    -t|--timeout) TIMEOUT="${2:-}"; shift 2 ;;
+    --revert)     REVERT=1; shift ;;
+    --no-unmount) NO_UNMOUNT=1; shift ;;
+    -h|--help)    usage 0 ;;
+    *) die "unknown option: $1 (try --help)" ;;
+  esac
+done
+[ "$REVERT" = 1 ] || case "$TIMEOUT" in (''|*[!0-9]*) die "timeout must be an integer" ;; esac
+
+# ---- 1. find the Tails system partition ----
+if [ -z "$DEVICE" ]; then
+  DEVICE=$(lsblk -rno NAME,LABEL,FSTYPE 2>/dev/null | awk '$2=="Tails" && $3=="vfat"{print "/dev/"$1; exit}')
+  [ -n "$DEVICE" ] || die "no vfat partition labelled 'Tails' found — plug in the stick or pass -d /dev/sdX1"
+fi
+[ -b "$DEVICE" ] || die "$DEVICE is not a block device"
+printf 'Tails system partition: %s\n' "$DEVICE"
+
+# ---- 2. mount it (symmetrically: remember how, so we can undo) ----
+WE_MOUNTED=0
+MOUNT_METHOD=""
+MP=$(findmnt -nfo TARGET "$DEVICE" 2>/dev/null || true)
+if [ -z "$MP" ]; then
+  if command -v udisksctl >/dev/null 2>&1; then
+    out=$(udisksctl mount -b "$DEVICE") || die "udisksctl mount failed"
+    MP=${out#*' at '}; MP=${MP%.}
+    MOUNT_METHOD=udisks
+  else
+    MP=$(mktemp -d)
+    sudo mount "$DEVICE" "$MP" || die "sudo mount failed"
+    MOUNT_METHOD=sudo
+  fi
+  WE_MOUNTED=1
+fi
+[ -d "$MP" ] || die "could not determine mountpoint"
+info "mounted at: $MP"
+
+cleanup() {
+  sync || true
+  if [ "$WE_MOUNTED" = 1 ] && [ "$NO_UNMOUNT" = 0 ]; then
+    case "$MOUNT_METHOD" in
+      udisks) udisksctl unmount -b "$DEVICE" >/dev/null 2>&1 || true ;;
+      sudo)   sudo umount "$MP" 2>/dev/null || true; rmdir "$MP" 2>/dev/null || true ;;
+    esac
+    info "unmounted — safe to remove"
+  fi
+}
+trap cleanup EXIT
+
+# ---- 3. locate the GRUB config(s) ----
+CFGS=()
+for c in "$MP/EFI/debian/grub.cfg" "$MP/EFI/debian/grub/grub.cfg"; do
+  [ -f "$c" ] && CFGS+=("$c")
+done
+if [ "${#CFGS[@]}" -eq 0 ]; then
+  while IFS= read -r c; do CFGS+=("$c"); done \
+    < <(find "$MP" -maxdepth 4 -name grub.cfg -path '*debian*' 2>/dev/null)
+fi
+[ "${#CFGS[@]}" -gt 0 ] || die "no Tails GRUB config found under $MP/EFI/debian/"
+
+# Need sudo for writes if the files aren't owned by us (e.g. sudo-mounted vfat).
+SUDO=""; [ -w "${CFGS[0]}" ] || SUDO="sudo"
+
+# ---- 4. apply (or revert) ----
+if [ "$REVERT" = 1 ]; then
+  echo "Reverting..."
+  for f in "${CFGS[@]}"; do
+    if [ -f "$f.bak" ]; then
+      $SUDO cp "$f.bak" "$f"; info "restored $(basename "$(dirname "$f")")/$(basename "$f") from .bak"
+    else
+      tmp=$(mktemp); grep -v '^set gfxmode=' "$f" > "$tmp"; $SUDO cp "$tmp" "$f"; rm -f "$tmp"
+      info "no .bak; removed gfxmode line from $f"
+    fi
+  done
+else
+  echo "Applying big-font fix (lower gfxmode + timeout=$TIMEOUT)..."
+  for f in "${CFGS[@]}"; do
+    $SUDO cp -n "$f" "$f.bak" 2>/dev/null || true   # one-time backup
+    tmp=$(mktemp)
+    awk -v gfx="$GFXMODE_LINE" -v to="$TIMEOUT" '
+      BEGIN { ins=0; tset=0 }
+      /fonts\/big\.pf2/      { next }                       # drop any old custom-font line
+      /^set gfxmode=/        { next }                       # drop existing gfxmode (re-add cleanly)
+      /^[[:space:]]*terminal_output[[:space:]]+gfxterm/ && !ins { print gfx; ins=1 }
+      /^set timeout=/        { print "set timeout=" to; tset=1; next }
+      /^menuentry / && !ins  { print gfx; ins=1 }           # fallback: no gfxterm anchor
+      /^menuentry / && !tset { print "set timeout=" to; tset=1 }
+      { print }
+      END { if(!ins) print gfx; if(!tset) print "set timeout=" to }
+    ' "$f" > "$tmp"
+    $SUDO cp "$tmp" "$f"; rm -f "$tmp"
+    info "patched: $f"
+  done
+  # remove any leftover custom font from earlier attempts
+  $SUDO rm -f "$MP/EFI/debian/grub/fonts/big.pf2" 2>/dev/null || true
+  $SUDO rmdir "$MP/EFI/debian/grub/fonts" 2>/dev/null || true
+fi
+
+# ---- 5. show evidence ----
+echo "Result:"
+for f in "${CFGS[@]}"; do
+  printf '  %s\n' "$f"
+  grep -nE '^set gfxmode=|^set timeout=|loadfont' "$f" | sed 's/^/      /'
+done
+echo "Done. Reboot the stick to see the enlarged menu (revert with: tails-bigfont --revert)."
