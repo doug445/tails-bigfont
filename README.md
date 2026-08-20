@@ -66,6 +66,16 @@ again (e.g. after a Tails auto-upgrade rewrites the boot files).
 - `tails-bigfont` — the standalone tool.
 - `install.sh` — self-contained installer (embeds an identical copy of the tool).
 - `deploy.sh` — Will's local one-shot: runs `install.sh --root`.
+- `LICENSE` — GNU General Public License v3.
 
 `install.sh` is the canonical portable artifact; the embedded copy is kept
 byte-identical to `tails-bigfont` at build time.
+
+## License
+
+GNU General Public License, version 3 or later (`GPL-3.0-or-later`) — see
+[`LICENSE`](LICENSE).
+
+Each script carries the copyright and licence notice in its own header, so the
+terms travel with `install.sh` even when it is copied to another machine on its
+own, without the rest of the repository.
