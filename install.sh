@@ -14,6 +14,17 @@
 #
 set -euo pipefail
 
+# Copyright (C) 2026 Will
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.  This program is distributed WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
+# the LICENSE file, or <https://www.gnu.org/licenses/>, for details.
+
+
 CMD=tails-bigfont
 DO_ROOT=0
 while [ $# -gt 0 ]; do
@@ -59,6 +70,17 @@ cat > "$tmptool" <<'TAILS_BIGFONT_EOF'
 #   tails-bigfont --revert [-d /dev/sdX1]
 #
 set -euo pipefail
+
+# Copyright (C) 2026 Will
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation, either version 3 of the License, or (at your option) any later
+# version.  This program is distributed WITHOUT ANY WARRANTY; without even the
+# implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
+# the LICENSE file, or <https://www.gnu.org/licenses/>, for details.
+
 
 GFXMODE_LINE='set gfxmode=640x480,800x600,1024x768,auto'
 TIMEOUT=15
