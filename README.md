@@ -67,7 +67,7 @@ GRUB during the upgrade, and `tails-bigfont` is removed from GRUB.
 
 - `tails-bigfont` — the standalone tool.
 - `install.sh` — self-contained installer (embeds an identical copy of the tool).
-- `deploy.sh` — separate local one-shot: runs `install.sh --root`.
+- `deploy.sh` — separate local one-shot for root: runs `install.sh --root`.
 - `LICENSE` — GNU General Public License v3.
 
 `install.sh` is the canonical portable artifact; the embedded copy is kept
