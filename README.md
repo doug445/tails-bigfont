@@ -59,13 +59,15 @@ have more than one plugged in.
 It mounts with `udisksctl` (no sudo) when available, falls back to `sudo mount`,
 and unmounts the same way it mounted. The edit is **idempotent** — re-running
 strips any prior `gfxmode`/custom-font lines first, so it's always safe to run
-again (e.g. after a Tails auto-upgrade rewrites the boot files).
+again (e.g. after a Tails auto-upgrade rewrites the boot files). You will need 
+to re-run `tailsbig` after any Tails OS system upgrade. Tails always re-writes
+GRUB during the upgrade, and `tails-bigfont` is removed during update.
 
 ## Files
 
 - `tails-bigfont` — the standalone tool.
 - `install.sh` — self-contained installer (embeds an identical copy of the tool).
-- `deploy.sh` — Will's local one-shot: runs `install.sh --root`.
+- `deploy.sh` — separate local one-shot: runs `install.sh --root`.
 - `LICENSE` — GNU General Public License v3.
 
 `install.sh` is the canonical portable artifact; the embedded copy is kept
