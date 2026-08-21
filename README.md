@@ -73,8 +73,7 @@ byte-identical to `tails-bigfont` at build time.
 
 ## License
 
-GNU General Public License, version 3 or later (`GPL-3.0-or-later`) — see
-[`LICENSE`](LICENSE).
+MIT License — see [`LICENSE`](LICENSE).
 
 Each script carries the copyright and licence notice in its own header, so the
 terms travel with `install.sh` even when it is copied to another machine on its
