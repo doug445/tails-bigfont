@@ -61,7 +61,7 @@ and unmounts the same way it mounted. The edit is **idempotent** — re-running
 strips any prior `gfxmode`/custom-font lines first, so it's always safe to run
 again (e.g. after a Tails auto-upgrade rewrites the boot files). You will need 
 to re-run `tailsbig` after any Tails OS system upgrade. Tails always re-writes
-GRUB during the upgrade, and `tails-bigfont` is removed from GRUB.
+GRUB during the upgrade, and the enlarged GRUB menu rendering is removed.
 
 ## Files
 
