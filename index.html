@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tails boot menu text too small? Make GRUB readable</title>
+<meta name="description" content="The Tails USB boot menu is unreadably small on high-resolution screens, and loading a bigger GRUB font does nothing. Lowering gfxmode works. How, by hand or with tails-bigfont.">
+<link rel="canonical" href="https://doug445.github.io/tails-bigfont/">
+<meta name="author" content="William MacKinnon">
+<meta name="robots" content="index, follow">
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="style.css">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="tails-bigfont">
+<meta property="og:title" content="Tails boot menu text too small? Make GRUB readable">
+<meta property="og:description" content="Loading a bigger GRUB font on a Tails stick does nothing: GRUB keeps its embedded font. Lowering the graphics resolution is what works, and it never touches Persistent Storage.">
+<meta property="og:url" content="https://doug445.github.io/tails-bigfont/">
+<meta property="og:image" content="https://doug445.github.io/tails-bigfont/card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="article:published_time" content="2026-10-14">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "headline": "The Tails boot menu text is too small. Here is what actually makes it bigger",
+      "datePublished": "2026-10-14",
+      "dateModified": "2026-10-14",
+      "image": "https://doug445.github.io/tails-bigfont/card.png",
+      "author": { "@type": "Person", "name": "William MacKinnon", "url": "https://github.com/doug445" },
+      "mainEntityOfPage": "https://doug445.github.io/tails-bigfont/",
+      "about": { "@type": "SoftwareApplication", "name": "tails-bigfont", "url": "https://github.com/doug445/tails-bigfont", "applicationCategory": "UtilitiesApplication", "operatingSystem": "Linux", "softwareVersion": "1.0.1", "license": "https://opensource.org/licenses/MIT", "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" } }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Why doesn't loading a bigger font make the Tails GRUB menu bigger?", "acceptedAnswer": { "@type": "Answer", "text": "GRUB's gfxterm keeps its embedded, roughly 16-pixel unicode font as the default no matter what you loadfont, so building a larger PF2 font and loading it makes no visible difference. Lowering the graphics resolution does: a smaller canvas makes the same font fill much more of the screen." } },
+        { "@type": "Question", "name": "Does it touch my Persistent Storage?", "acceptedAnswer": { "@type": "Answer", "text": "No. Only the unencrypted Tails system partition (vfat, label Tails) is edited. The LUKS Persistent Storage partition is never touched." } },
+        { "@type": "Question", "name": "Do I have to redo it after a Tails upgrade?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Tails rewrites its GRUB configuration during every system upgrade, which removes the change. Re-run the tool afterwards; it is idempotent, so running it again is always safe." } },
+        { "@type": "Question", "name": "Can it leave the boot menu blank?", "acceptedAnswer": { "@type": "Answer", "text": "No. The mode list ends with auto, so if the firmware offers none of the small resolutions, GRUB falls back to its usual choice. A one-time .bak of each config is kept, and --revert restores it." } }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<nav class="sitenav" aria-label="Site">
+  <div class="wrap">
+    <a class="brand" href="./">tails-bigfont</a>
+    <a href="#by-hand">By hand</a>
+    <a href="#tool">The tool</a>
+    <a href="https://github.com/doug445/tails-bigfont">GitHub</a>
+  </div>
+</nav>
+
+<main class="wrap">
+<h1>The Tails boot menu text is too small. Here is what actually makes it bigger</h1>
+<p class="lede">
+  On a high-resolution laptop screen, the GRUB menu on a Tails USB stick, where you pick the
+  kernel and boot options, is microscopic. The obvious fix is to load a bigger font, and it does
+  nothing. This page explains why, and the change that does work.
+</p>
+
+<h2 id="why">Why a bigger font doesn't help</h2>
+<p>
+  GRUB's graphical terminal, <code>gfxterm</code>, keeps its <strong>embedded, roughly 16-pixel
+  <code>unicode</code> font</strong> as the default, whatever you <code>loadfont</code>. You can
+  build a large PF2 font, load it, and see no change at all.
+</p>
+<p>
+  What changes the size you see is the <strong>graphics resolution</strong>. At 640×480 the same
+  16-pixel font fills far more of the screen than at a laptop panel's native 2560×1600. So the fix is
+  to ask GRUB for a small mode.
+</p>
+
+<h2 id="by-hand">The fix, by hand</h2>
+<p>Add this line to Tails' GRUB configuration, immediately before
+  <code>terminal_output gfxterm</code>:</p>
+<div class="codeblock"><pre><code>set gfxmode=640x480,800x600,1024x768,auto</code></pre></div>
+<p>
+  GRUB tries the modes in order and uses the first one your firmware actually offers, so you get
+  the biggest text available. <code>auto</code> at the end is the safety net: if none of the small
+  modes exists, GRUB falls back to its usual choice and the menu can't go blank.
+</p>
+<div class="note"><p><strong>Edit only the Tails system partition</strong>: the unencrypted vfat
+  partition labelled <code>Tails</code>. Never touch the LUKS Persistent Storage partition. Keep a
+  copy of each file you edit. <strong>Tails rewrites its GRUB files on every system
+  upgrade</strong>, so the change has to be made again afterwards.</p></div>
+
+<h2 id="tool">The tool: tails-bigfont</h2>
+<div class="tool"><p><strong>Automated:</strong>
+  <a href="https://github.com/doug445/tails-bigfont">tails-bigfont</a> makes exactly this edit.
+  It finds the stick itself (<code>LABEL=Tails</code>, <code>FSTYPE=vfat</code>), mounts it with
+  <code>udisksctl</code> without sudo where it can, inserts the <code>gfxmode</code> line, sets a
+  15-second menu timeout, keeps a one-time <code>.bak</code> of each config, and unmounts the same
+  way it mounted. It is idempotent: re-running strips any earlier <code>gfxmode</code> or
+  custom-font lines first, so it's safe to run again after every Tails upgrade.</p></div>
+<div class="codeblock"><pre><code>./install.sh            # installs tails-bigfont, plus a tailsfont function and tailsbig alias
+tails-bigfont           # plug in the stick; it finds the Tails partition
+tails-bigfont -t 10     # custom GRUB timeout (default 15)
+tails-bigfont -d /dev/sdb1    # pick the partition yourself if several sticks are plugged in
+tails-bigfont --revert  # restore from .bak, or just remove the gfxmode line</code></pre></div>
+<p><code>install.sh</code> is self-contained, with the whole tool embedded, so you can copy that
+  one file to any Linux machine. It adds the <code>tailsfont</code> function and
+  <code>tailsbig</code> alias to bash, zsh and fish. MIT licence.</p>
+
+<h2 id="faq">FAQ</h2>
+<details>
+  <summary>Why doesn't loading a bigger font make the Tails GRUB menu bigger?</summary>
+  <p>GRUB's gfxterm keeps its embedded, roughly 16-pixel unicode font as the default no matter
+    what you loadfont, so building a larger PF2 font and loading it makes no visible difference.
+    Lowering the graphics resolution does: a smaller canvas makes the same font fill much more of
+    the screen.</p>
+</details>
+<details>
+  <summary>Does it touch my Persistent Storage?</summary>
+  <p>No. Only the unencrypted Tails system partition (vfat, label Tails) is edited. The LUKS
+    Persistent Storage partition is never touched.</p>
+</details>
+<details>
+  <summary>Do I have to redo it after a Tails upgrade?</summary>
+  <p>Yes. Tails rewrites its GRUB configuration during every system upgrade, which removes the
+    change. Re-run the tool afterwards; it is idempotent, so running it again is always safe.</p>
+</details>
+<details>
+  <summary>Can it leave the boot menu blank?</summary>
+  <p>No. The mode list ends with auto, so if the firmware offers none of the small resolutions,
+    GRUB falls back to its usual choice. A one-time .bak of each config is kept, and --revert
+    restores it.</p>
+</details>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>tails-bigfont</strong> by William MacKinnon
+      (<a href="https://github.com/doug445">doug445</a>) ·
+      <a href="https://github.com/doug445/tails-bigfont">Source on GitHub</a></p>
+    <p>Independent project. Not affiliated with or endorsed by the Tails project.</p>
+    <p>Copyright © 2026 William MacKinnon. MIT licence. Page last updated 14 October 2026.</p>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.codeblock').forEach(function (block) {
+  var btn = document.createElement('button');
+  btn.className = 'copy'; btn.type = 'button'; btn.textContent = 'Copy';
+  btn.addEventListener('click', function () {
+    navigator.clipboard.writeText(block.querySelector('code').innerText).then(function () {
+      btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+    }).catch(function () { btn.textContent = 'Select + copy'; });
+  });
+  block.appendChild(btn);
+});
+</script>
+</body>
+</html>
