@@ -2,6 +2,8 @@
 
 Enlarge the microscopic **GRUB boot/kernel-select menu** text on a Tails USB stick.
 
+Free and open source under the [MIT licence](LICENSE).
+
 ## Why this works (and the font approach doesn't)
 
 GRUB's `gfxterm` keeps its **embedded ~16px `unicode` font** as the default no
