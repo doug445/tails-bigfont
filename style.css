@@ -178,3 +178,11 @@ footer p { margin: 0 0 .5rem; }
 .tool { border: 1px solid var(--accent); border-radius: 12px; padding: 1rem 1.2rem; margin: 2rem 0; background: var(--surface); }
 .tool p:last-child { margin-bottom: 0; }
 small { color: var(--muted); }
+
+.compare { display: grid; grid-template-columns: 1fr; gap: 1rem; margin: 1rem 0 1.5rem; }
+@media (min-width: 720px) { .compare { grid-template-columns: 1fr 1fr; } }
+.compare figure { margin: 0; }
+.compare img { width: 100%; height: auto; background: #000; }
+.compare figcaption { text-align: left; }
+td code { overflow-wrap: anywhere; }
+@media (max-width: 600px) { .codeblock pre { padding-top: 2.6rem; } }
