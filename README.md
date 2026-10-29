@@ -61,9 +61,12 @@ unless Secure Boot is disabled.
 Copy just that one file to any machine and run it:
 
 ```sh
-./install.sh          # install tails-bigfont + the tailsfont / tailsbig shortcuts
-./install.sh --root   # also clean v1-era blocks out of root's shell rc files
+git clone https://github.com/doug445/tails-bigfont.git
+cd tails-bigfont
+./install.sh
 ```
+
+Or copy just `install.sh` to the machine and run it.
 
 It installs `tails-bigfont` to `/usr/local/bin` (or `~/.local/bin` if it can't),
 plus `tailsfont` and `tailsbig` as **symlinks** to it in the same directory. They
@@ -73,7 +76,19 @@ straight away, with no shell reload and no rc files to edit or keep intact.
 Older versions put a `tailsfont` function and `tailsbig` alias in `~/.bashrc`,
 `~/.zshrc` and fish's function directory instead. Those vanished whenever
 something rewrote the rc files. The installer removes those old blocks and
-files.
+files (and root's too, for a system-wide install).
+
+## Updating
+
+From your clone:
+
+```sh
+git pull && ./install.sh
+```
+
+The installer is idempotent, so re-running it simply replaces the command and
+symlinks with the new version. Then re-run `tailsbig` with the stick plugged in
+so the stick gets the new version's GRUB changes too.
 
 ## Use
 
@@ -111,7 +126,7 @@ Tails version.
 
 ## Upgrading from v1
 
-1. Re-run `./install.sh` (or `./deploy.sh` here) to get the v2 command and the
+1. `git pull && ./install.sh` to get the v2 command and the
    `tailsfont`/`tailsbig` symlinks.
 2. Run `tailsbig` with the stick plugged in. It removes v1's `gfxmode` line,
    adds the new block and font, and reads Tails' original timeout from the
@@ -121,7 +136,6 @@ Tails version.
 
 - `tails-bigfont`: the standalone tool (the font is embedded at the end of it).
 - `install.sh`: self-contained installer (embeds an identical copy of the tool).
-- `deploy.sh`: local one-shot that runs `install.sh --root` (system install + root cleanup).
 - `CHANGELOG.md`: release history.
 - `LICENSE`: MIT License (scripts).
 - `LICENSE-font-DejaVu`: Bitstream Vera / DejaVu licence (bundled font).

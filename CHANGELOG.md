@@ -19,6 +19,8 @@ All notable changes to this project are documented here. The format follows
   removes the tool's own edits in place, and `.bak` is refreshed whenever an
   unmodified config is found.
 - `--revert` now restores Tails' original GRUB timeout instead of leaving 15.
+- `install.sh` wrongly said `/usr/local/bin is not on your PATH` unless it was
+  the very last PATH entry.
 - **`tailsfont` / `tailsbig` stopped working** whenever something rewrote
   `~/.bashrc` / `~/.zshrc`, because they only existed as an rc-file function and
   alias. They are now installed as symlinks next to `tails-bigfont`.
@@ -29,8 +31,10 @@ All notable changes to this project are documented here. The format follows
   `set gfxmode=` line. The tool also writes `EFI/debian/grub/fonts/tailsbig.pf2`
   to the stick. Configs patched by v1 are migrated automatically on the next run.
 - `install.sh` no longer edits shell rc files. It installs `tailsfont` and
-  `tailsbig` symlinks, and removes the old rc blocks (`--root` also cleans
-  root's) and the old fish function files.
+  `tailsbig` symlinks, and removes the old rc blocks (root's too, for a
+  system-wide install) and the old fish function files.
+- `deploy.sh` is gone; `./install.sh` does everything it did. `--root` is still
+  accepted but does nothing, since root cleanup is now automatic.
 - With the font loaded, GRUB uses `gfxmode=1024x768,auto`. The v1 list
   (`640x480,800x600,1024x768,auto`) is now only the fallback when the font
   can't be loaded (e.g. Secure Boot lockdown).
@@ -41,6 +45,7 @@ All notable changes to this project are documented here. The format follows
 - `-V` / `--version`.
 - Refuses to run if the Tails partition is already mounted read-only.
 - `LICENSE-font-DejaVu` for the bundled font.
+- README: **Updating** section (`git pull && ./install.sh`).
 
 ## [1.0.1] - 2026-08-20
 

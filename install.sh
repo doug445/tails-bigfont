@@ -5,12 +5,13 @@
 # This single file carries the whole tool embedded inside it. Copy it to any
 # machine and run it; no other files are needed.
 #
-#   ./install.sh           # install tails-bigfont + the tailsfont / tailsbig shortcuts
-#   ./install.sh --root    # also clean v1-era blocks out of root's shell rc files
+#   ./install.sh           # install or update tails-bigfont + tailsfont / tailsbig
 #
 # It installs the `tails-bigfont` command (to /usr/local/bin when possible, else
 # ~/.local/bin) plus `tailsfont` and `tailsbig` as symlinks to it, so the short
 # names work in every shell (and under sudo) without touching any rc file.
+# Re-run it after `git pull` to update. It also removes the shell rc blocks that
+# v1 added (root's too, for a system-wide install).
 #
 set -euo pipefail
 
@@ -37,10 +38,9 @@ set -euo pipefail
 #
 
 CMD=tails-bigfont
-DO_ROOT=0
 while [ $# -gt 0 ]; do
   case "$1" in
-    --root) DO_ROOT=1; shift ;;
+    --root) shift ;;   # v1 flag; root cleanup is now automatic, accepted so old instructions still work
     -h|--help) sed -n '2,18{/^#/!q;s/^# \{0,1\}//p}' "$0"; exit 0 ;;
     *) echo "install.sh: unknown option: $1" >&2; exit 1 ;;
   esac
@@ -587,9 +587,9 @@ clean_user() {  # $1 = rc file owned by current user
 
 clean_root() {  # $1 = root-owned rc file
   local rc="$1"
-  sudo grep -qxF "$MB" "$rc" 2>/dev/null || return 0
+  $SUDO grep -qxF "$MB" "$rc" 2>/dev/null || return 0
   local tmp; tmp=$(mktemp)
-  sudo cat "$rc" | strip_block > "$tmp" && sudo tee "$rc" < "$tmp" >/dev/null
+  $SUDO cat "$rc" | strip_block > "$tmp" && $SUDO tee "$rc" < "$tmp" >/dev/null
   rm -f "$tmp"; echo "  removed old block from $rc (root)"
 }
 
@@ -601,14 +601,14 @@ for f in tailsfont tailsbig; do
     rm -f "$ff"; echo "  removed old fish function $ff"
   fi
 done
-if [ "$DO_ROOT" = 1 ]; then
+if [ "$BIN_DIR" = /usr/local/bin ]; then   # system-wide install: we have root
   clean_root /root/.bashrc
   clean_root /root/.zshrc
 fi
 
 # ---- 4. PATH sanity + done ----
 case ":$PATH:" in
-  *":$BIN_DIR:") : ;;
+  *":$BIN_DIR:"*) : ;;
   *) echo "NOTE: $BIN_DIR is not on your PATH — add it or run $BIN directly." ;;
 esac
 
