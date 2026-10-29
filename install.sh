@@ -5,12 +5,12 @@
 # This single file carries the whole tool embedded inside it. Copy it to any
 # machine and run it; no other files are needed.
 #
-#   ./install.sh           # install command + shell function/alias for you
-#   ./install.sh --root    # also add the function/alias to root's shells
+#   ./install.sh           # install tails-bigfont + the tailsfont / tailsbig shortcuts
+#   ./install.sh --root    # also clean v1-era blocks out of root's shell rc files
 #
 # It installs the `tails-bigfont` command (to /usr/local/bin when possible, else
-# ~/.local/bin) and adds a `tailsfont` shell function + `tailsbig` alias to your
-# bash / zsh / fish configs.
+# ~/.local/bin) plus `tailsfont` and `tailsbig` as symlinks to it, so the short
+# names work in every shell (and under sudo) without touching any rc file.
 #
 set -euo pipefail
 
@@ -555,68 +555,55 @@ TAILS_BIGFONT_EOF
 $SUDO cp "$tmptool" "$BIN"
 $SUDO chmod 0755 "$BIN"
 rm -f "$tmptool"
+for a in tailsfont tailsbig; do
+  $SUDO ln -sfn "$CMD" "$BIN_DIR/$a"
+  echo "Linking   $a -> $CMD"
+done
 
-# ---- 3. wire up shell function + alias ----
+# ---- 3. remove the shell wiring older versions added ----
+# v1 put a tailsfont function + tailsbig alias in rc files, which silently broke
+# whenever something rewrote those files. The symlinks above replace it.
 MB="# >>> tails-bigfont >>>"
 ME="# <<< tails-bigfont <<<"
 
-sh_block() {
-  cat <<EOF
-$MB
-tailsfont() { command $CMD "\$@"; }   # enlarge Tails GRUB menu font
-alias tailsbig='tailsfont'
-$ME
-EOF
-}
-
-# strip any previous block (between markers) from stdin
+# strip the block (between markers, plus the blank line before it) from stdin
 strip_block() {
   awk -v b="$MB" -v e="$ME" '
-    $0==b {skip=1} skip==1 {if($0==e) skip=0; next} {print}'
+    $0==b {skip=1; held=0; next}
+    skip  {if($0==e) skip=0; next}
+    held  {print ""; held=0}
+    $0=="" {held=1; next}
+    {print}
+    END {if(held) print ""}'
 }
 
-add_block_user() {  # $1 = rc file owned by current user
+clean_user() {  # $1 = rc file owned by current user
   local rc="$1"
-  [ -e "$rc" ] || command -v "$2" >/dev/null 2>&1 || return 0
-  touch "$rc"
+  grep -qxF "$MB" "$rc" 2>/dev/null || return 0
   local tmp; tmp=$(mktemp)
-  strip_block < "$rc" > "$tmp"
-  { cat "$tmp"; printf '\n'; sh_block; } > "$rc"
-  rm -f "$tmp"; echo "  updated $rc"
+  strip_block < "$rc" > "$tmp" && cat "$tmp" > "$rc"
+  rm -f "$tmp"; echo "  removed old block from $rc"
 }
 
-add_block_root() {  # $1 = root-owned rc file
+clean_root() {  # $1 = root-owned rc file
   local rc="$1"
-  sudo test -e "$rc" || return 0
+  sudo grep -qxF "$MB" "$rc" 2>/dev/null || return 0
   local tmp; tmp=$(mktemp)
-  sudo cat "$rc" | strip_block > "$tmp"
-  { cat "$tmp"; printf '\n'; sh_block; } | sudo tee "$rc" >/dev/null
-  rm -f "$tmp"; echo "  updated $rc (root)"
+  sudo cat "$rc" | strip_block > "$tmp" && sudo tee "$rc" < "$tmp" >/dev/null
+  rm -f "$tmp"; echo "  removed old block from $rc (root)"
 }
 
-echo "Wiring shell function 'tailsfont' + alias 'tailsbig':"
-add_block_user "$HOME/.bashrc" bash
-add_block_user "$HOME/.zshrc"  zsh
-
-# fish (function files, since fish has no `alias` in rc the same way)
-if [ -d "$HOME/.config/fish" ] || command -v fish >/dev/null 2>&1; then
-  fdir="$HOME/.config/fish/functions"; mkdir -p "$fdir"
-  cat > "$fdir/tailsfont.fish" <<EOF
-function tailsfont --description 'Enlarge Tails GRUB boot-menu font'
-    command $CMD \$argv
-end
-EOF
-  cat > "$fdir/tailsbig.fish" <<EOF
-function tailsbig --description 'alias for tailsfont'
-    tailsfont \$argv
-end
-EOF
-  echo "  updated fish functions ($fdir)"
-fi
-
+clean_user "$HOME/.bashrc"
+clean_user "$HOME/.zshrc"
+for f in tailsfont tailsbig; do
+  ff="$HOME/.config/fish/functions/$f.fish"
+  if grep -q "tails-bigfont\|tailsfont" "$ff" 2>/dev/null; then
+    rm -f "$ff"; echo "  removed old fish function $ff"
+  fi
+done
 if [ "$DO_ROOT" = 1 ]; then
-  add_block_root /root/.bashrc
-  add_block_root /root/.zshrc
+  clean_root /root/.bashrc
+  clean_root /root/.zshrc
 fi
 
 # ---- 4. PATH sanity + done ----
@@ -629,7 +616,7 @@ cat <<EOF
 
 Installed.
   command : $BIN
-  function: tailsfont   alias: tailsbig
-Reload your shell (exec \$SHELL) then run:  tailsfont
-It auto-detects the vfat 'Tails' partition; override with: tailsfont -d /dev/sdX1
+  also as : tailsfont, tailsbig (symlinks; work in any shell, no reload needed)
+Plug in the Tails stick and run:  tailsbig
+It auto-detects the vfat 'Tails' partition; override with: tailsbig -d /dev/sdX1
 EOF

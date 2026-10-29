@@ -19,12 +19,18 @@ All notable changes to this project are documented here. The format follows
   removes the tool's own edits in place, and `.bak` is refreshed whenever an
   unmodified config is found.
 - `--revert` now restores Tails' original GRUB timeout instead of leaving 15.
+- **`tailsfont` / `tailsbig` stopped working** whenever something rewrote
+  `~/.bashrc` / `~/.zshrc`, because they only existed as an rc-file function and
+  alias. They are now installed as symlinks next to `tails-bigfont`.
 
 ### Changed (breaking)
 - GRUB config edits are now a marked `# >>> tails-bigfont >>>` block containing
   an `if loadfont …; then … else … fi` fallback, instead of a single bare
   `set gfxmode=` line. The tool also writes `EFI/debian/grub/fonts/tailsbig.pf2`
   to the stick. Configs patched by v1 are migrated automatically on the next run.
+- `install.sh` no longer edits shell rc files. It installs `tailsfont` and
+  `tailsbig` symlinks, and removes the old rc blocks (`--root` also cleans
+  root's) and the old fish function files.
 - With the font loaded, GRUB uses `gfxmode=1024x768,auto`. The v1 list
   (`640x480,800x600,1024x768,auto`) is now only the fallback when the font
   can't be loaded (e.g. Secure Boot lockdown).

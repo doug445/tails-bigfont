@@ -61,12 +61,19 @@ unless Secure Boot is disabled.
 Copy just that one file to any machine and run it:
 
 ```sh
-./install.sh          # install command + `tailsfont` function / `tailsbig` alias
-./install.sh --root   # also wire root's shells
+./install.sh          # install tails-bigfont + the tailsfont / tailsbig shortcuts
+./install.sh --root   # also clean v1-era blocks out of root's shell rc files
 ```
 
 It installs `tails-bigfont` to `/usr/local/bin` (or `~/.local/bin` if it can't),
-and adds a `tailsfont` function + `tailsbig` alias to bash, zsh, and fish.
+plus `tailsfont` and `tailsbig` as **symlinks** to it in the same directory. They
+are real commands, so they work in bash, zsh, fish, plain `sh` and under `sudo`
+straight away, with no shell reload and no rc files to edit or keep intact.
+
+Older versions put a `tailsfont` function and `tailsbig` alias in `~/.bashrc`,
+`~/.zshrc` and fish's function directory instead. Those vanished whenever
+something rewrote the rc files. The installer removes those old blocks and
+files.
 
 ## Use
 
@@ -74,8 +81,8 @@ Plug in the Tails stick and run any of:
 
 ```sh
 tails-bigfont           # auto-detects the vfat 'Tails' partition
-tailsfont               # shell function (same thing)
-tailsbig                # alias
+tailsfont               # same command (symlink)
+tailsbig                # same command (symlink)
 
 tails-bigfont -t 10     # custom GRUB timeout (default 15)
 tails-bigfont -s 48     # bigger font (needs grub-mkfont + DejaVu Sans Mono locally)
@@ -104,14 +111,17 @@ Tails version.
 
 ## Upgrading from v1
 
-Just run `tails-bigfont` again. It removes v1's `gfxmode` line, adds the new
-block and font, and reads Tails' original timeout from the existing `.bak`.
+1. Re-run `./install.sh` (or `./deploy.sh` here) to get the v2 command and the
+   `tailsfont`/`tailsbig` symlinks.
+2. Run `tailsbig` with the stick plugged in. It removes v1's `gfxmode` line,
+   adds the new block and font, and reads Tails' original timeout from the
+   existing `.bak`.
 
 ## Files
 
 - `tails-bigfont`: the standalone tool (the font is embedded at the end of it).
 - `install.sh`: self-contained installer (embeds an identical copy of the tool).
-- `deploy.sh`: separate local one-shot for root that runs `install.sh --root`.
+- `deploy.sh`: local one-shot that runs `install.sh --root` (system install + root cleanup).
 - `CHANGELOG.md`: release history.
 - `LICENSE`: MIT License (scripts).
 - `LICENSE-font-DejaVu`: Bitstream Vera / DejaVu licence (bundled font).
