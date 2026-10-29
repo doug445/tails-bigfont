@@ -3,6 +3,22 @@
 Enlarge the microscopic **GRUB boot/kernel-select menu** text on a Tails USB stick.
 
 Free and open source under the [MIT licence](LICENSE).
+Project page: <https://doug445.github.io/tails-bigfont/>
+
+## Before and after
+
+The same Tails 7.15.1 stick and GRUB binary, on firmware that only offers its
+native 2560×1600 mode (like a Retina MacBook Pro). Captured in QEMU/OVMF and
+scaled down to 1200 px wide.
+
+**Before (v1, lower `gfxmode` only):** the firmware has no smaller mode, so
+GRUB stays at 2560×1600 and the text is microscopic.
+
+![Tails GRUB menu with v1: tiny text filling a fraction of a 2560x1600 screen](screenshots/menu-before-v1.png)
+
+**After (v2, bundled 32px font):** same resolution, readable menu.
+
+![Tails GRUB menu with v2: large, readable menu text at 2560x1600](screenshots/menu-after-v2.png)
 
 ## How it works
 
@@ -139,6 +155,7 @@ Tails version.
 - `CHANGELOG.md`: release history.
 - `LICENSE`: MIT License (scripts).
 - `LICENSE-font-DejaVu`: Bitstream Vera / DejaVu licence (bundled font).
+- `screenshots/`: the before/after images above.
 
 `install.sh` is the canonical portable artifact; the embedded copy is kept
 byte-identical to `tails-bigfont` at build time.
